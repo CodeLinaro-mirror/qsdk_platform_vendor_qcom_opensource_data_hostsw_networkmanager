@@ -1847,5 +1847,9 @@ global:
 
 libnm_1_42_0 {
 global:
+	nm_device_loopback_get_type;
+	nm_setting_loopback_get_mtu;
+	nm_setting_loopback_get_type;
+	nm_setting_loopback_new;
 	nm_setting_ovs_interface_get_ofport_request;
 } libnm_1_40_0;

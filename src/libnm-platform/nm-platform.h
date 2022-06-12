@@ -2677,4 +2677,29 @@ nm_platform_mptcp_addr_update(NMPlatform *self, NMOptionBool add, const NMPlatfo
 
 GPtrArray *nm_platform_mptcp_addrs_dump(NMPlatform *self);
 
+/*****************************************************************************/
+
+static inline NMPlatformIP4Address *
+nm_platform_ip4_address_init_loopback_addr1(NMPlatformIP4Address *a)
+{
+    *a = ((NMPlatformIP4Address){
+        .address      = NM_IPV4LO_ADDR1,
+        .peer_address = NM_IPV4LO_ADDR1,
+        .ifindex      = NM_LOOPBACK_IFINDEX,
+        .plen         = NM_IPV4LO_PREFIXLEN,
+    });
+    return a;
+}
+
+static inline NMPlatformIP6Address *
+nm_platform_ip6_address_init_loopback(NMPlatformIP6Address *a)
+{
+    *a = ((NMPlatformIP6Address){
+        .address = IN6ADDR_LOOPBACK_INIT,
+        .ifindex = NM_LOOPBACK_IFINDEX,
+        .plen    = 128,
+    });
+    return a;
+}
+
 #endif /* __NETWORKMANAGER_PLATFORM_H__ */

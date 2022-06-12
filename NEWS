@@ -10,6 +10,12 @@ USE AT YOUR OWN RISK.  NOT RECOMMENDED FOR PRODUCTION USE!
 
 * nmcli: allow changing "connection.uuid" and "connection.type"
   in offline mode and setting the UUID when creating a connection.
+* Add support of loopback interface and a new connection type "loopback". On D-Bus,
+  the loopback interface now has the "org.freedesktop.NetworkManager.Device.Loopback"
+  interface instead of org.freedesktop.NetworkManager.Device.Generic".
+  Loopback handling is special in that when the NetworkManager profile is
+  deactivated, the interfaces will still be up and configured with a 127.0.0.1
+  address.
 
 =============================================
 NetworkManager-1.40
