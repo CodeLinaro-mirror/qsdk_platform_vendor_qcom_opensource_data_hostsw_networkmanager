@@ -39,6 +39,25 @@ meson --version
 # to run that test as part of the build. Disable it.
 export NMTST_SKIP_CHECK_GITLAB_CI=1
 
+test_subtree() {
+    local d="$1"
+    local cc="$2"
+
+    do_clean
+    pushd ./src/$d
+
+    CC="$cc" meson build
+    ninja -C test
+
+    popd
+}
+
+for d in c-list c-rbtree c-siphash c-stdaux n-acd n-dhcp4 ; do
+    for cc in gcc clang; do
+        test_subtree "$d"
+    done
+done
+
 do_clean; BUILD_TYPE=autotools CC=gcc   WITH_DOCS=1 WITH_VALGRIND=1 contrib/scripts/nm-ci-run.sh
 rm -rf /tmp/nm-docs-html;
 mv build/INST/share/gtk-doc/html /tmp/nm-docs-html
