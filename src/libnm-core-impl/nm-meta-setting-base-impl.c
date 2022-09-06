@@ -703,19 +703,21 @@ nm_meta_setting_infos_by_name(const char *name)
     return idx >= 0 ? &nm_meta_setting_infos[idx] : NULL;
 }
 
-const NMMetaSettingInfo *
-nm_meta_setting_infos_by_gtype(GType gtype)
-{
+/*****************************************************************************/
+
 #if _NM_META_SETTING_BASE_IMPL_LIBNM
+static const NMMetaSettingInfo *
+_infos_by_gtype_from_class(GType gtype)
+{
     nm_auto_unref_gtypeclass GTypeClass *gtypeclass_unref = NULL;
     GTypeClass                          *gtypeclass;
     NMSettingClass                      *klass;
 
     if (!g_type_is_a(gtype, NM_TYPE_SETTING))
-        goto out_none;
+        return NULL;
 
     gtypeclass = g_type_class_peek(gtype);
-    if (!gtypeclass)
+    if (G_UNLIKELY(!gtypeclass))
         gtypeclass = gtypeclass_unref = g_type_class_ref(gtype);
 
     nm_assert(NM_IS_SETTING_CLASS(gtypeclass));
@@ -723,38 +725,117 @@ nm_meta_setting_infos_by_gtype(GType gtype)
     klass = (NMSettingClass *) gtypeclass;
 
     if (!klass->setting_info)
-        goto out_none;
+        return NULL;
 
     nm_assert(klass->setting_info->get_setting_gtype);
     nm_assert(klass->setting_info->get_setting_gtype() == gtype);
-
     return klass->setting_info;
+}
+#endif
 
-out_none:
+static const NMMetaSettingInfo *
+_infos_by_gtype_search(GType gtype)
+{
+    int i;
 
-    if (NM_MORE_ASSERTS > 10) {
-        int i;
-
-        /* this might hint to a bug, but it would be expected for NM_TYPE_SETTING
-         * and NM_TYPE_SETTING_IP_CONFIG.
-         *
-         * Assert that we didn't lookup for a gtype, which we would expect to find.
-         * An assertion failure here, hints to a bug in nm_setting_*_class_init().
-         */
-        for (i = 0; i < _NM_META_SETTING_TYPE_NUM; i++)
-            nm_assert(nm_meta_setting_infos[i].get_setting_gtype() != gtype);
-    }
-
-    return NULL;
-#else
-    guint i;
-
-    for (i = 0; i < _NM_META_SETTING_TYPE_NUM; i++) {
+    for (i = 0; i < (int) _NM_META_SETTING_TYPE_NUM; i++) {
         if (nm_meta_setting_infos[i].get_setting_gtype() == gtype)
             return &nm_meta_setting_infos[i];
     }
     return NULL;
+}
+
+typedef struct {
+    GType                    gtype;
+    const NMMetaSettingInfo *setting_info;
+} LookupData;
+
+static int
+_lookup_data_cmp(gconstpointer ptr_a, gconstpointer ptr_b, gpointer user_data)
+{
+    const LookupData *a = ptr_a;
+    const LookupData *b = ptr_b;
+
+    nm_assert(a);
+    nm_assert(b);
+    nm_assert(a != b);
+
+    NM_CMP_FIELD(a, b, gtype);
+    return nm_assert_unreachable_val(0);
+}
+
+static const NMMetaSettingInfo *
+_infos_by_gtype_binary_search(GType gtype)
+{
+    static LookupData        static_array[_NM_META_SETTING_TYPE_NUM];
+    static const LookupData *static_ptr = NULL;
+    const LookupData        *ptr;
+    int                      imin;
+    int                      imax;
+
+again:
+    ptr = g_atomic_pointer_get(&static_ptr);
+    if (G_UNLIKELY(!ptr)) {
+        static gsize g_lock = 0;
+        int          i;
+
+        if (!g_once_init_enter(&g_lock))
+            goto again;
+
+        for (i = 0; i < _NM_META_SETTING_TYPE_NUM; i++) {
+            const NMMetaSettingInfo *m = &nm_meta_setting_infos[i];
+
+            static_array[i].gtype        = m->get_setting_gtype();
+            static_array[i].setting_info = m;
+        }
+
+        g_qsort_with_data(static_array,
+                          _NM_META_SETTING_TYPE_NUM,
+                          sizeof(static_array[0]),
+                          _lookup_data_cmp,
+                          NULL);
+
+        ptr = static_array;
+        g_atomic_pointer_set(&static_ptr, ptr);
+
+        g_once_init_leave(&g_lock, 1);
+    }
+
+    imin = 0;
+    imax = _NM_META_SETTING_TYPE_NUM - 1;
+
+    while (G_LIKELY(imin <= imax)) {
+        const int imid = (imin + imax) / 2;
+
+        if (G_UNLIKELY(ptr[imid].gtype == gtype))
+            return ptr[imid].setting_info;
+
+        if (ptr[imid].gtype < gtype)
+            imin = imid + 1;
+        else
+            imax = imid - 1;
+    }
+
+    return NULL;
+}
+
+const NMMetaSettingInfo *
+nm_meta_setting_infos_by_gtype(GType gtype)
+{
+    const NMMetaSettingInfo *setting_info;
+
+#if _NM_META_SETTING_BASE_IMPL_LIBNM
+    setting_info = _infos_by_gtype_from_class(gtype);
+#else
+    setting_info = _infos_by_gtype_binary_search(gtype);
 #endif
+
+    if (NM_MORE_ASSERTS > 20) {
+        nm_assert(setting_info == _infos_by_gtype_search(gtype));
+        nm_assert(setting_info == _infos_by_gtype_binary_search(gtype));
+    }
+
+    return setting_info;
 }
 
 /*****************************************************************************/
