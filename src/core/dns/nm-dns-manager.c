@@ -1244,13 +1244,15 @@ merge_global_dns_config(NMResolvConfData *rc, NMGlobalDnsConfig *global_conf)
     }
 
     default_domain = nm_global_dns_config_lookup_domain(global_conf, "*");
-    nm_assert(default_domain);
+    if (!default_domain)
+        return TRUE;
 
     servers = nm_global_dns_domain_get_servers(default_domain);
-    if (servers) {
-        for (i = 0; servers[i]; i++)
-            add_string_item(rc->nameservers, servers[i], TRUE);
-    }
+    if (!servers)
+        return TRUE;
+
+    for (i = 0; servers[i]; i++)
+        add_string_item(rc->nameservers, servers[i], TRUE);
 
     return TRUE;
 }

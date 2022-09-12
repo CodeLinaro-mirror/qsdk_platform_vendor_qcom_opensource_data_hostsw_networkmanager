@@ -1122,7 +1122,6 @@ load_global_dns(GKeyFile *keyfile, gboolean internal)
     char              *group, *domain_prefix;
     gs_strfreev char **groups = NULL;
     int                g, i, j, domain_prefix_len;
-    gboolean           default_found = FALSE;
     char             **strv;
 
     if (internal) {
@@ -1228,17 +1227,6 @@ load_global_dns(GKeyFile *keyfile, gboolean internal)
         domain->options = options;
 
         g_hash_table_insert(dns_config->domains, strdup(name), domain);
-
-        if (name[0] == '*' && name[1] == '\0')
-            default_found = TRUE;
-    }
-
-    if (!default_found) {
-        nm_log_dbg(LOGD_CORE,
-                   "%s global DNS configuration is missing default domain, ignore it",
-                   internal ? "internal" : "user");
-        nm_global_dns_config_free(dns_config);
-        return NULL;
     }
 
     dns_config->internal = internal;
