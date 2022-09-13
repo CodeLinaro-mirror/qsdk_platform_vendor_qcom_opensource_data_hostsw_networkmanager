@@ -14261,6 +14261,7 @@ _get_managed_by_flags(NMUnmanagedFlags flags, NMUnmanagedFlags mask, gboolean fo
  *   If this parameter is %TRUE, the device can only appear more managed.
  *
  * Whether the device is unmanaged according to the unmanaged flags.
+ * Unrealized devices are always considered managed.
  *
  * Returns: %TRUE if the device is unmanaged because of the flags.
  */
@@ -14271,10 +14272,8 @@ nm_device_get_managed(NMDevice *self, gboolean for_user_request)
 
     g_return_val_if_fail(NM_IS_DEVICE(self), FALSE);
 
-    if (!nm_device_is_real(self)) {
-        /* a unrealized device is always considered unmanaged. */
-        return FALSE;
-    }
+    if (!nm_device_is_real(self))
+        return TRUE;
 
     priv = NM_DEVICE_GET_PRIVATE(self);
 
