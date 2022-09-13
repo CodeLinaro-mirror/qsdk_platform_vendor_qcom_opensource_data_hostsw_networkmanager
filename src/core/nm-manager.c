@@ -3345,6 +3345,9 @@ _get_best_connectivity(NMManager *self, int addr_family)
         NMConnectivityState state;
         gint64              metric;
 
+        if (NM_IS_DEVICE_LOOPBACK(dev))
+            continue;
+
         r = nm_device_get_best_default_route(dev, addr_family);
         if (r)
             metric = NMP_OBJECT_CAST_IP_ROUTE(r)->metric;
