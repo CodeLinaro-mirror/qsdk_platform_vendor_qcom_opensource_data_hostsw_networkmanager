@@ -59,6 +59,7 @@ Wi-Fi:
 * Suppress Wi-Fi scans while a Wi-Fi P2P device on the same radio is
   activating, so that going off-channel does not disrupt group formation
   or DHCP on the P2P link.
+* Fix lax permissions on newly mirrored IWD profiles.
 
 nmtui:
 * Group known and other Wi-Fi networks separately in the "Activate a
